@@ -22,7 +22,7 @@ def getlog(m, res=False):
         record = cursor.fetchall()
         for s in record:
             print(s)
-            bot.send_message(m.chat.id, s[1] + " " + s[2])
+            bot.send_message(m.chat.id, s[1][:19] + " " + s[2])
         cursor.close()
     except sqlite3.Error as error:
         print("Ошибка при подключении к sqlite", error)
@@ -42,10 +42,10 @@ def handle_text(message):
         cursor.execute("CREATE TABLE IF NOT EXISTS bot_chat_log (id INTEGER PRIMARY KEY, dtime timestamp, text TEXT NOT NULL);")
         sqlite_connection.commit()
         timestamp = datetime.datetime.now()
-        print("пишем в БД: " + message.text + " " + timestamp.strftime("%m/%d/%Y, %H:%M:%S"))
+        print("пишем в БД: " + timestamp.strftime("%m/%d/%Y, %H:%M:%S") + message.text)
 
         datatuple = (timestamp, message.text)
-        cursor.execute("INSERT INTO bot_chat_log(text) VALUES(?,?);", datatuple)
+        cursor.execute("INSERT INTO bot_chat_log(dtime, text) VALUES(?,?);", datatuple)
         sqlite_connection.commit()
 
         cursor.execute("SELECT * FROM bot_chat_log")
