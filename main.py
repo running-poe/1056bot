@@ -7,9 +7,18 @@ import datetime
 # Создаем экземпляр бота
 bot = telebot.TeleBot('5292665914:AAHN-lYNur-Mr7sC2kGxLmNkkm2BjRcl7MI')
 # Функция, обрабатывающая команду /start
-@bot.message_handler(commands=["start"])
+@bot.message_handler(commands=["ki"])
 def start(m, res=False):
-    bot.send_message(m.chat.id, 'Я на связи. Напиши мне что-нибудь )')
+    msg = str(m.text).split()
+    if len(msg) == 1:
+        bot.send_message(m.chat.id, "/ki описание инцидента")
+        return
+    initiator = m.from_user.first_name + " " + m.from_user.username
+    msg.pop(0)
+    ki = ' '.join(msg)
+    print(ki)
+
+
 
 #получение лога из БД
 @bot.message_handler(commands=["getlog"])
