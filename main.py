@@ -15,6 +15,7 @@ ki_current_status = -1
 # набор id чатов, где зарегистрирован бот
 bot_chat_list = []
 
+
 # инициализация БД
 def init_db():
     sqlite_connection = 0
@@ -67,8 +68,8 @@ def get_incident_status():
     # при первом запуске есл
     try:
         with open('chats.json', 'r') as file_object:
-           data = json.load(file_object)
-           bot_chat_list = data
+            data = json.load(file_object)
+            bot_chat_list = data
     except:
         pass
 
@@ -78,7 +79,7 @@ def store_incident_status():
     global ki_current_status
     global bot_chat_list
 
-    dataduple = [ki_current_id, ki_current_status ]  # create a set of numbers
+    dataduple = [ki_current_id, ki_current_status]  # create a set of numbers
     filename = 'app.json'  # use the file extension .json
     with open(filename, 'w') as file_object:  # open the file in write mode
         json.dump(dataduple, file_object)
@@ -86,6 +87,7 @@ def store_incident_status():
     filenamechats = 'chats.json'
     with open(filenamechats, 'w') as file_object:  # open the file in write mode
         json.dump(bot_chat_list, file_object)
+
 
 # функция записи в БД
 def write_to_db(str, datatuple):
@@ -134,7 +136,7 @@ def get_report(curr=-1):
                         time_end = datetime.datetime.strptime(s[4], "%Y-%m-%d, %H:%M:%S")
                         diff = time_end - time_start
                         print(diff)
-                        result = "\n№" +str(s[0]) + " Закрыт: " + str(s[4]) + " " + str(s[6]) + "\n"
+                        result = "\n№" + str(s[0]) + " Закрыт: " + str(s[4]) + " " + str(s[6]) + "\n"
                         result += "\nДлительность инцидента: " + str(diff)
                     report += result + "\n==========================\n"
 
@@ -172,12 +174,12 @@ def add_comment(msg, chat_id, username, photo=0):
         if len(msg) == 1:
             if ki_current_status == -1 or ki_current_status == 1:
                 bot.send_message(chat_id, "Нет открытых инцидентов, введите /add [номер_инцидента] [комментарий] "
-                                                  "для добавления комментария к закрытому инциденту. "
-                                                  "№ инцидента можно узнать из отчета по команде /report")
+                                          "для добавления комментария к закрытому инциденту. "
+                                          "№ инцидента можно узнать из отчета по команде /report")
                 return
             if ki_current_status == 0:
                 bot.send_message(chat_id, "Введите /add [комментарий] "
-                                                  "для добавления комментария к текущему инциденту.")
+                                          "для добавления комментария к текущему инциденту.")
                 return
 
         num = ki_current_id
@@ -198,7 +200,7 @@ def add_comment(msg, chat_id, username, photo=0):
 
                 if num > ki_current_id or num < 1:
                     bot.send_message(chat_id, "Некорректный номер инцидента. "
-                                                      "№ инцидента можно узнать из отчета по команде /report")
+                                              "№ инцидента можно узнать из отчета по команде /report")
                     return
 
                 num = int(msg[1])
@@ -207,7 +209,7 @@ def add_comment(msg, chat_id, username, photo=0):
                 msg.pop(0)
             else:
                 bot.send_message(chat_id, "/add [номер_инцидента] [комментарий] "
-                                                  "для добавления комментария к закрытому инциденту. ")
+                                          "для добавления комментария к закрытому инциденту. ")
                 return
 
         print("add: номер инцидента ", num)
@@ -226,10 +228,11 @@ def add_comment(msg, chat_id, username, photo=0):
     else:
         if len(msg) == 1:
             if ki_current_status == -1 or ki_current_status == 1:
-                bot.send_message(chat_id, "Нет открытых инцидентов, введите /add [номер_инцидента] [опционально: комментарий] "
-                                                  "для добавления скриншота с комментарием к закрытому инциденту. "
-                                                  "№ инцидента можно узнать из отчета по команде /report. "
-                                                "Скриншоты можно добавлять только по одному.")
+                bot.send_message(chat_id,
+                                 "Нет открытых инцидентов, введите /add [номер_инцидента] [опционально: комментарий] "
+                                 "для добавления скриншота с комментарием к закрытому инциденту. "
+                                 "№ инцидента можно узнать из отчета по команде /report. "
+                                 "Скриншоты можно добавлять только по одному.")
                 return
             # есть открытый инцидент, добавляем картинку к нему
             else:
@@ -255,33 +258,36 @@ def add_comment(msg, chat_id, username, photo=0):
         data = pickle.dumps(photo)
 
         datatuple = (num,
-                         timestamp.strftime("%Y-%m-%d, %H:%M:%S"),
-                         username,
-                         comment,
-                         data)
+                     timestamp.strftime("%Y-%m-%d, %H:%M:%S"),
+                     username,
+                     comment,
+                     data)
         print("add ", datatuple)
         write_to_db(
-                "INSERT INTO incident_comment_data(fk_id,comment_time,commentator,comment,data) VALUES(?,?,?,?,?);",
-                datatuple)
+            "INSERT INTO incident_comment_data(fk_id,comment_time,commentator,comment,data) VALUES(?,?,?,?,?);",
+            datatuple)
+
 
 # Создаем экземпляр бота и иниицируем db
 bot = telebot.TeleBot('5292665914:AAHN-lYNur-Mr7sC2kGxLmNkkm2BjRcl7MI')
+
+
 # init_db()
 
 # Функция /commands
 @bot.message_handler(commands=["commands"])
 def commands_command(message, res=False):
-    bot.send_message(message.chat.id, "***1056bot*** 0.14a\n\nБот для оповещения и ведения статистики инцидентов.\n"
-                                      "/open [комментарий] - открыть инцидент, указать комментарий о происшествии\n"
+    bot.send_message(message.chat.id, "***1056bot*** 0.16a\n\nБот для оповещения и ведения статистики инцидентов.\n"
+                                      "/open [ПЦЛ/УВР] [комментарий] - открыть инцидент по системе [ПЦЛ/УВР], указать комментарий о происшествии\n"
                                       "/close [комментарий] - сообщить о закрытии инцидента\n"
                                       "/report - вывести отчет по инцидентам\n"
                                       "/add [комментарий] - добавить комментарий по текущему (открытому) инциденту\n"
                                       "/add [номер_инцидента] [комментарий] - добавить комментарий по инциденту "
                                       "с указанным номером. Номер можно узнать по команде /report\n"
-                                      "/addimg [комментарий] - добавить изображение и комментарий (необзятально)"
-                                      " по текущему инциденту\n"
+                                      "/addimg [комментарий] - добавить изображение и комментарий (необязатально)"
+                                      " по текущему инциденту. Можно добавлять изображения только по одному!\n"
                                       "/addimg [номер_инцидента] [комментарий] - добавить изображение и комментарий "
-                                      "(необзятально) по закрытому инциденту\n"
+                                      "(необзятально) по закрытому инциденту. Можно добавлять изображения только по одному!\n"
                                       "/comments - вывести все комментарии по текущему (открытому инциденту)\n"
                                       "/comments [номер] - вывести комментарии по инциденту [номер]\n"
                                       "/msg [сообщение] - отправить сообщение по всем каналам присутствия бота\n"
@@ -303,6 +309,19 @@ def register_command(message, res=False):
     store_incident_status()
 
 
+@bot.message_handler(commands=["unregister"])
+def unregister_command(message, res=False):
+    delete_registration(message.chat.id)
+    # важно записать chat_id для нового канала
+    store_incident_status()
+
+
+def delete_registration(chatid):
+    global bot_chat_list
+    if chatid in bot_chat_list:
+        bot_chat_list.remove(chatid)
+
+
 # Функция, обрабатывающая команду /msg
 @bot.message_handler(commands=["msg"])
 def msg(message, res=False):
@@ -318,12 +337,14 @@ def msg(message, res=False):
     msg = ' '.join(msg)
 
     initiator = message.from_user.username
-    try:
-        for chat_id in bot_chat_list:
+    for chat_id in bot_chat_list:
+        try:
             bot.send_message(chat_id, "Сообщение от @" + str(initiator) + ": " + str(msg))
             time.sleep(0.1)
-    except:
-        print("msg: ошибка " + str(chat_id) + " " + initiator)
+        finally:
+            print("msg: ошибка ", str(chat_id))
+            delete_registration(chat_id)
+
 
 
 # Функция, обрабатывающая команду /open
@@ -333,6 +354,8 @@ def open_command(message, res=False):
     global ki_current_status
     global bot_chat_list
 
+    system = 0
+
     # обновим статус по инциденту
     get_incident_status()
 
@@ -341,11 +364,20 @@ def open_command(message, res=False):
         return
 
     msg = str(message.text).split()
-    if len(msg) == 1:
-        bot.send_message(message.chat.id, "/open [описание] инцидента")
+    if len(msg) < 3:
+        bot.send_message(message.chat.id, "/open [ПЦЛ/УВР] [описание] инцидента")
         return
 
-    #подготовим данные для инициации инцидента из сообщения
+    if msg[1].upper() == "ПЦЛ" or msg[1].upper() == "PCL" or msg[1] == "0":
+        system = 0
+    elif msg[1].upper() == "УВР" or msg[1].upper() == "УВР" or msg[1] == "1":
+        system = 1
+    else:
+        bot.send_message(message.chat.id, "/open [ПЦЛ/УВР] [описание] инцидента")
+        return
+
+    # подготовим данные для инициации инцидента из сообщения
+    msg.pop(0)
     msg.pop(0)
     ki_message = ' '.join(msg)
     timestamp = datetime.datetime.now()
@@ -354,9 +386,11 @@ def open_command(message, res=False):
     datatuple = (timestamp.strftime("%Y-%m-%d, %H:%M:%S"),
                  message.from_user.username,
                  ki_message,
-                 0)
+                 0,
+                 system)
 
-    write_to_db("INSERT INTO bot_chat_log_ext(open_time, initiator, ki_open_info, status) VALUES(?,?,?,?);", datatuple)
+    write_to_db("INSERT INTO bot_chat_log_ext(open_time, initiator, ki_open_info, status, system) VALUES(?,?,?,?,?);",
+                datatuple)
 
     # сохраним параметры
     ki_current_id += 1
@@ -369,9 +403,16 @@ def open_command(message, res=False):
         bot_chat_list.append(message.chat.id)
 
     for chatid in bot_chat_list:
-        bot.send_message(chatid, "Открыт инцидент №" + str(ki_current_id) + ": " + ki_message +
+        try:
+            print("open chatid: ", chatid)
+            bot.send_message(chatid, "Открыт инцидент №" + str(ki_current_id) + ": " + ki_message +
                          "\nИнициатор: @" + str(message.from_user.username))
-        time.sleep(0.1)
+            time.sleep(0.1)
+        finally:
+            print("msg: ошибка ", str(chatid))
+            delete_registration(chatid)
+
+
     return
 
 
@@ -437,6 +478,7 @@ def add_command(message, res=False):
                 message.from_user.username)
     return
 
+
 # добавить комментарий с картинкой. Картинку храним со всеми потрохами, в формате telebot
 @bot.message_handler(content_types=["photo"])
 def addimg_command(message):
@@ -456,12 +498,13 @@ def addimg_command(message):
     return
 
 
-#получение отчета по инцидентам из БД
+# получение отчета по инцидентам из БД
 @bot.message_handler(commands=["report"])
 def report_command(message, res=False):
     rep = get_report()
     bot.send_message(message.chat.id, rep)
     return
+
 
 @bot.message_handler(commands=["comments"])
 def comments_command(message, res=False):
@@ -475,11 +518,13 @@ def comments_command(message, res=False):
     msg = str(message.text).split()
     # paranoid
     if len(msg) == 1 and ki_current_status == -1:
-        bot.send_message(message.chat.id, "Нет открытого инцидента, напишите /comments [номер] для получения комментариев по прошлому инциденту")
+        bot.send_message(message.chat.id,
+                         "Нет открытого инцидента, напишите /comments [номер] для получения комментариев по прошлому инциденту")
         return
 
     if len(msg) == 1 and ki_current_status == 1:
-        bot.send_message(message.chat.id, "Нет открытого инцидента, напишите /comments [номер] для получения комментариев по прошлому инциденту")
+        bot.send_message(message.chat.id,
+                         "Нет открытого инцидента, напишите /comments [номер] для получения комментариев по прошлому инциденту")
         return
 
     if len(msg) == 1:
@@ -529,5 +574,3 @@ get_incident_status()
 
 # Запускаем бота
 bot.polling(none_stop=True, interval=0)
-
-
