@@ -36,7 +36,8 @@ def init_db():
             "close_time TEXT,"
             "close_manager TEXT,"
             "ki_close_info TEXT,"
-            "status INTEGER NOT NULL);")
+            "status INTEGER NOT NULL,"
+            "system INTEGER DEFAULT 0 NOT NULL );")
         sqlite_connection.commit()
 
         cursor.execute(
