@@ -51,15 +51,16 @@ def get_filename(filename):
 logger = logging.getLogger("my_log")
 logger.setLevel(logging.DEBUG)
 
-rotation_logging_handler = logging.handlers.TimedRotatingFileHandler('./logs/.log', when='d', interval=1, backupCount=5)
+rotation_logging_handler = TimedRotatingFileHandler('./logs/log.log', when='d', interval=1, backupCount=5)
 rotation_logging_handler.suffix = '%Y%m%d'
 rotation_logging_handler.namer = get_filename
+logger.addHandler(rotation_logging_handler)
 
 # задаем базовый формат сообщения в логе
 # https://habr.com/ru/sandbox/150814/
 basic_formatter = logging.Formatter('%(asctime)s : [%(levelname)s] : %(message)s')
 rotation_logging_handler.setFormatter(basic_formatter)
-logger.addHandler(rotation_logging_handler)
+
 
 
 # метод для вывода детальной информации об ошибке Python в лог
@@ -116,7 +117,7 @@ def init_db():
             sqlite_connection.close()
             print("initdb: соединение с SQLite закрыто")
 
-
+# метод выгружает номер и статус инцидента
 def get_incident_status():
     global ki_current_id
     global ki_current_status
@@ -140,9 +141,9 @@ def get_incident_status():
         line_no = str(frame[0]).split()[4]
         error_log(line_no)
         pass
-
     logger.info("<- get_incident_status")
 
+# метод сохраняет статус инцидента (номер, статус)
 def store_incident_status():
     global ki_current_id
     global ki_current_status
@@ -183,6 +184,7 @@ def write_to_db(s, datatuple):
             logger.debug("   Cоединение с SQLite закрыто!")
     logger.info("<- write_to_db")
 
+# метод формирует отчет
 def get_report(curr=-1):
     logger.info("-> get_report")
     # строка с отчетом
@@ -205,7 +207,6 @@ def get_report(curr=-1):
                 report += "Инциденты отсутствуют"
             else:
                 for s in record:
-                    print(s)
                     time_start = datetime.datetime.strptime(s[1], "%Y-%m-%d, %H:%M:%S")
                     report += "№" + str(s[0]) + " Открыт: " + str(s[1]) + " " + str(s[3])
                     if int(s[7]) == 0:
@@ -213,22 +214,19 @@ def get_report(curr=-1):
                     else:
                         time_end = datetime.datetime.strptime(s[4], "%Y-%m-%d, %H:%M:%S")
                         diff = time_end - time_start
-                        print(diff)
                         result = "\n№" + str(s[0]) + " Закрыт: " + str(s[4]) + " " + str(s[6]) + "\n"
                         result += "\nДлительность инцидента: " + str(diff)
                     report += result + "\n==========================\n"
-                    logger.debug("\n", report)
+                    logger.debug("\n" + report)
         else:
             if len(record) > 0:
-                print(record)
                 time_start = datetime.datetime.strptime(record[0][1], "%Y-%m-%d, %H:%M:%S")
                 time_end = datetime.datetime.strptime(record[0][4], "%Y-%m-%d, %H:%M:%S")
                 diff = time_end - time_start
-                print(diff)
                 report = "\nДлительность инцидента: " + str(diff)
             else:
                 report = "\nДлительность инцидента не определена!"
-                logger.debug("\n" + report)
+            logger.debug("\n" + report)
         cursor.close()
     except sqlite3.Error as error:
         logger.error("Ошибка при подключении к sqlite: " + str(error))
@@ -264,7 +262,7 @@ def save_report_to_csv(param=0, data=0):
             logger.debug("   " + s)
         cursor.close()
     except sqlite3.Error as error:
-        logger.error("Ошибка при подключении к sqlite", error)
+        logger.error("Ошибка при подключении к sqlite: " + str(error))
     finally:
         if sqlite_connection:
             sqlite_connection.close()
@@ -755,8 +753,6 @@ def comments_command(message):
 
 # обновим статус
 get_incident_status()
-save_report_to_csv()
-
 
 # Запускаем бота
 bot.polling(none_stop=True, interval=0)
