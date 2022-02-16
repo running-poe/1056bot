@@ -9,6 +9,7 @@ from logging.handlers import TimedRotatingFileHandler
 import traceback
 import os
 import sys
+import configparser
 
 # Глобальные переменные
 # идентификатор текущего открытого инцидента, -1 если нет открытых
@@ -19,6 +20,9 @@ ki_current_status = -1
 
 # набор id чатов, где зарегистрирован бот
 bot_chat_list = []
+
+
+
 
 
 # метод для формирования имени файла для ротационного логгера
@@ -45,12 +49,29 @@ def get_filename(filename):
         f = '{}.{}.log'.format(filename, index)
     return f
 
+# прочитаем конфигурационный файл
+config = configparser.ConfigParser()
+try:
+    config.read('config.ini')
+except OSError as error:
+    sys.exit("Не найден конфигурационный файл! не могу стартовать, нет API-KEY!")
+
+
+logger = logging.getLogger("my_log")
+match config['MAIN']['errorlevel']:
+    case 'DEBUG':
+        logger.setLevel(logging.DEBUG)
+    case 'INFO':
+        logger.setLevel(logging.INFO)
+    case 'WARNING':
+        logger.setLevel(logging.WARNING)
+    case 'ERROR':
+        logger.setLevel(logging.ERROR)
+    case _:
+        logger.setLevel(logging.DEBUG)
 
 # https://makesomecode.me/2019/03/python-log-rotation/
 # ротационный файловый логгер
-logger = logging.getLogger("my_log")
-logger.setLevel(logging.DEBUG)
-
 rotation_logging_handler = TimedRotatingFileHandler('./logs/log.log', when='d', interval=1, backupCount=5)
 rotation_logging_handler.suffix = '%Y%m%d'
 rotation_logging_handler.namer = get_filename
@@ -390,9 +411,10 @@ def add_comment(msg, chat_id, username, photo=0):
     return
 
 
+
 # Создаем экземпляр бота и иниицируем db
 logger.info("Регистрация бота в Телеграмме..")
-bot = telebot.TeleBot('5292665914:AAHN-lYNur-Mr7sC2kGxLmNkkm2BjRcl7MI')
+bot = telebot.TeleBot(config['DEFAULT']['APIKEY'])
 
 # init_db()
 
