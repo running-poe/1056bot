@@ -57,7 +57,6 @@ try:
 except OSError as error:
     sys.exit("Не найден конфигурационный файл! не могу стартовать, нет API-KEY!")
 
-
 logger = logging.getLogger("my_log")
 print("Установка errorlevel=" + str(config['MAIN']['errorlevel']))
 
