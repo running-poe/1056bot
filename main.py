@@ -52,12 +52,15 @@ def get_filename(filename):
 # прочитаем конфигурационный файл
 config = configparser.ConfigParser()
 try:
+    print("Загрузка конфигурационного файла..")
     config.read('config.ini')
 except OSError as error:
     sys.exit("Не найден конфигурационный файл! не могу стартовать, нет API-KEY!")
 
 
 logger = logging.getLogger("my_log")
+print("Установка errorlevel=" + str(config['MAIN']['errorlevel']))
+
 match config['MAIN']['errorlevel']:
     case 'DEBUG':
         logger.setLevel(logging.DEBUG)
@@ -81,7 +84,6 @@ logger.addHandler(rotation_logging_handler)
 # https://habr.com/ru/sandbox/150814/
 basic_formatter = logging.Formatter('%(asctime)s : [%(levelname)s] : %(message)s')
 rotation_logging_handler.setFormatter(basic_formatter)
-
 
 
 # метод для вывода детальной информации об ошибке Python в лог
