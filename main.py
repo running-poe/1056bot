@@ -417,7 +417,7 @@ def send_report_command(message):
 # Функция /commands
 @bot.message_handler(commands=["commands"])
 def commands_command(message):
-    logger.debug("-> commands_command")
+    logger.info("-> commands_command")
     bot.send_message(message.chat.id, "***1056bot*** 0.16a\n\nБот для оповещения и ведения статистики инцидентов.\n"
                                       "/open [ПЦЛ/УВР] [комментарий] - открыть инцидент по системе [ПЦЛ/УВР], указать комментарий о происшествии\n"
                                       "/close [комментарий] - сообщить о закрытии инцидента\n"
@@ -434,7 +434,7 @@ def commands_command(message):
                                       "/msg [сообщение] - отправить сообщение по всем каналам присутствия бота\n"
                                       "TODO: получение отчета по инцидентам в формате Excel и сохранение "
                                       "медиа комментариев (в т.ч. скриншотов)")
-    logger("<- commands_command")
+    logger.info("<- commands_command")
     return
 
 
