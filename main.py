@@ -418,7 +418,7 @@ def send_report_command(message):
 @bot.message_handler(commands=["commands"])
 def commands_command(message):
     logger.info("-> commands_command")
-    bot.send_message(message.chat.id, "***1056bot*** 0.16a\n\nБот для оповещения и ведения статистики инцидентов.\n"
+    bot.send_message(message.chat.id, "***1056bot*** 0.22\n\nБот для оповещения и ведения статистики инцидентов.\n"
                                       "/open [ПЦЛ/УВР] [комментарий] - открыть инцидент по системе [ПЦЛ/УВР], указать комментарий о происшествии\n"
                                       "/close [комментарий] - сообщить о закрытии инцидента\n"
                                       "/report - вывести отчет по инцидентам\n"
@@ -752,7 +752,8 @@ def comments_command(message):
 
 
 # обновим статус
+logging.info("Загружаем начальные параметры")
 get_incident_status()
 
 # Запускаем бота
-bot.polling(none_stop=True, interval=0)
+bot.polling(timeout=10, long_polling_timeout=5)
