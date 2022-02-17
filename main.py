@@ -228,12 +228,12 @@ def get_report(curr=-1):
                 report += "Инциденты отсутствуют"
             else:
                 for s in record:
-                    time_start = datetime.datetime.strptime(s[1], "%Y-%m-%d, %H:%M:%S")
+                    time_start = datetime.datetime.strptime(s[1], "%Y-%m-%d %H:%M:%S")
                     report += "№" + str(s[0]) + " Открыт: " + str(s[1]) + " " + str(s[3])
                     if int(s[7]) == 0:
                         result = "\n№" + str(s[0]) + " Не закрыт!\n"
                     else:
-                        time_end = datetime.datetime.strptime(s[4], "%Y-%m-%d, %H:%M:%S")
+                        time_end = datetime.datetime.strptime(s[4], "%Y-%m-%d %H:%M:%S")
                         diff = time_end - time_start
                         result = "\n№" + str(s[0]) + " Закрыт: " + str(s[4]) + " " + str(s[6]) + "\n"
                         result += "\nДлительность инцидента: " + str(diff)
@@ -241,8 +241,8 @@ def get_report(curr=-1):
                     logger.debug("\n" + report)
         else:
             if len(record) > 0:
-                time_start = datetime.datetime.strptime(record[0][1], "%Y-%m-%d, %H:%M:%S")
-                time_end = datetime.datetime.strptime(record[0][4], "%Y-%m-%d, %H:%M:%S")
+                time_start = datetime.datetime.strptime(record[0][1], "%Y-%m-%d %H:%M:%S")
+                time_end = datetime.datetime.strptime(record[0][4], "%Y-%m-%d %H:%M:%S")
                 diff = time_end - time_start
                 report = "\nДлительность инцидента: " + str(diff)
             else:
@@ -356,7 +356,7 @@ def add_comment(msg, chat_id, username, photo=0):
 
         comment = ' '.join(msg)
         datatuple = (num,
-                     timestamp.strftime("%Y-%m-%d, %H:%M:%S"),
+                     timestamp.strftime("%Y-%m-%d %H:%M:%S"),
                      username,
                      comment)
         logger.debug("   пишем в БД:\n" + str(datatuple))
@@ -398,7 +398,7 @@ def add_comment(msg, chat_id, username, photo=0):
         data = pickle.dumps(photo)
 
         datatuple = (num,
-                     timestamp.strftime("%Y-%m-%d, %H:%M:%S"),
+                     timestamp.strftime("%Y-%m-%d %H:%M:%S"),
                      username,
                      comment,
                      data)
@@ -567,9 +567,9 @@ def open_command(message):
     msg.pop(0)
     ki_message = ' '.join(msg)
     timestamp = datetime.datetime.now()
-    logger.debug("   Пишем в БД: " + str(timestamp.strftime("%Y-%m-%d, %H:%M:%S")) + " " + str(ki_message))
+    logger.debug("   Пишем в БД: " + str(timestamp.strftime("%Y-%m-%d %H:%M:%S")) + " " + str(ki_message))
 
-    datatuple = (timestamp.strftime("%Y-%m-%d, %H:%M:%S"),
+    datatuple = (timestamp.strftime("%Y-%m-%d %H:%M:%S"),
                  message.from_user.username,
                  ki_message,
                  0,
@@ -631,7 +631,7 @@ def close_command(message):
     # так как мы закрываем инцидент, соответствующим образом устанавливаем статус инцидента
     ki_current_status = 1
 
-    datatuple = (timestamp.strftime("%Y-%m-%d, %H:%M:%S"),
+    datatuple = (timestamp.strftime("%Y-%m-%d %H:%M:%S"),
                  message.from_user.username,
                  ki_close_info,
                  ki_current_status,
@@ -773,26 +773,113 @@ def comments_command(message):
     logger.info("<- comments_command")
     return
 
+# метод формирует статистику по инцидентам
+def get_stats():
+    sqlite_connection = 0
+    stats = "Статистика по инцидентам:\n"
+    try:
+        # получим инцидентов всего
+
+        sqlite_connection = sqlite3.connect('sqlite_python.db')
+        cursor = sqlite_connection.cursor()
+        cursor.execute("select count(*) from bot_chat_log_ext")
+        res = cursor.fetchall()
+        stats += "* всего зафиксировано: " + str(res[0][0]) + "\n"
+
+
+        # получим инцидентов всего по ПЦЛ
+        sqlite_connection = sqlite3.connect('sqlite_python.db')
+        cursor = sqlite_connection.cursor()
+        cursor.execute("select count(*) from bot_chat_log_ext where system=0")
+        res = cursor.fetchall()
+        stats += "* из них по ИС ПЦЛ: " + str(res[0][0]) + "\n"
+
+        # получим инцидентов всего по УВР
+        sqlite_connection = sqlite3.connect('sqlite_python.db')
+        cursor = sqlite_connection.cursor()
+        cursor.execute("select count(*) from bot_chat_log_ext where system=1")
+        res = cursor.fetchall()
+        stats += "* из них по ИС УВР: " + str(res[0][0]) + "\n"
+
+        # получим инцидентов всего по ПЦЛ за 7 дней
+        sqlite_connection = sqlite3.connect('sqlite_python.db')
+        cursor = sqlite_connection.cursor()
+        cursor.execute("select count(*) from bot_chat_log_ext WHERE "
+                       "open_time > (SELECT DATETIME('now', '-7 day')) and system =0")
+        res = cursor.fetchall()
+        stats += "* по ИС ПЦЛ за неделю: " + str(res[0][0]) + "\n"
+
+        # получим инцидентов всего по УВР за 7 дней
+        sqlite_connection = sqlite3.connect('sqlite_python.db')
+        cursor = sqlite_connection.cursor()
+        cursor.execute("select count(*) from bot_chat_log_ext WHERE "
+                       "open_time > (SELECT DATETIME('now', '-7 day')) and system =1")
+        res = cursor.fetchall()
+        stats += "* по ИС УВР за неделю: " + str(res[0][0]) + "\n"
+
+        # получим среднюю длительность решения инцидента
+        sqlite_connection = sqlite3.connect('sqlite_python.db')
+        cursor = sqlite_connection.cursor()
+        cursor.execute("select CAST(avg(avg_time) as INTEGER) from (select ROUND((julianday(close_time)-julianday(open_time))*24*60) as avg_time from bot_chat_log_ext)")
+        res = cursor.fetchall()
+        stats += "* средняя длительность инцидента: " + str(res[0][0]) + " минут\n"
+        """
+        select count(*) from bot_chat_log_ext;
+        select count(*) from bot_chat_log_ext where system=1;
+        select count(*) from bot_chat_log_ext where system=0;
+        select count(*) from bot_chat_log_ext WHERE open_time > (SELECT DATETIME('now', '-7 day'));
+        select count(*) from bot_chat_log_ext WHERE open_time > (SELECT DATETIME('now', '-7 day')) and system =0;
+        select count(*) from bot_chat_log_ext WHERE open_time > (SELECT DATETIME('now', '-7 day')) and system =1;
+        select avg(avg_time) from (select ROUND((julianday(close_time)-julianday(open_time))*24*60) as avg_time from bot_chat_log_ext) 
+        """
+    except sqlite3.Error as error:
+        logger.error(error)
+        frame = traceback.extract_tb(sys.exc_info()[2])
+        line_no = str(frame[0]).split()[4]
+        error_log(line_no)
+    finally:
+        if sqlite_connection:
+            sqlite_connection.close()
+            logger.debug("Соединение с SQLite закрыто")
+    return stats
+
+
+@bot.message_handler(commands=["stats"])
+def stats_command(message):
+    logger.info("-> stats_command")
+    stats = get_stats()
+    bot.send_message(message.chat.id, stats)
+    logger.info("<- stats_command")
+    return
+
+
 
 # обновим статус
 logger.info("Загружаем начальные параметры")
 get_incident_status()
 
-def process_smth():
-    print("OK!")
+
+def send_stats():
+    global bot_chat_list
+    logger.info("-> СОБЫТИЕ send_stats")
+    stat = get_stats()
+    for chat_id in bot_chat_list:
+        bot.send_message(chat_id, stat)
+        logger.debug("  рассылка по расписанию: " + str(chat_id))
+    logger.info("<- send_stats")
+
 
 # еженедельный отчет по расписанию
 def do_schedule():
-    schedule.every(5).minutes.do(process_smth)
-
+    logger.info("--> ПОТОК do_schedule")
+    schedule.every().monday.at("8:30").do(send_stats)
     while True:
         schedule.run_pending()
         time.sleep(1)
 
 threading.Thread(target=do_schedule).start()
 
-
-
+## SELECT * FROM bot_chat_log_ext WHERE open_time > (SELECT DATETIME('now', '-20 day'))
 
 # Запускаем бота
 logger.info("Стартуем..")
