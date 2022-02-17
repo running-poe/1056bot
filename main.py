@@ -793,6 +793,7 @@ threading.Thread(target=do_schedule).start()
 
 
 
+
 # Запускаем бота
 logger.info("Стартуем..")
 bot.polling(timeout=10, long_polling_timeout=5)
