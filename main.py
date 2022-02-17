@@ -10,6 +10,8 @@ import traceback
 import os
 import sys
 import configparser
+import threading
+import schedule
 
 # Глобальные переменные
 # идентификатор текущего открытого инцидента, -1 если нет открытых
@@ -20,9 +22,6 @@ ki_current_status = -1
 
 # набор id чатов, где зарегистрирован бот
 bot_chat_list = []
-
-
-
 
 
 # метод для формирования имени файла для ротационного логгера
@@ -133,7 +132,7 @@ def init_db():
             "data BLOB);")
         sqlite_connection.commit()
     except sqlite3.Error as error:
-        logger.error ("Ошибка при подключении к sqlite", error)
+        logger.error("Ошибка при подключении к sqlite", error)
     finally:
         if sqlite_connection:
             sqlite_connection.close()
@@ -338,7 +337,7 @@ def add_comment(msg, chat_id, username, photo=0):
                 if num > ki_current_id or num < 1:
                     bot.send_message(chat_id, "Некорректный номер инцидента. "
                                               "№ инцидента можно узнать из отчета по команде /report")
-                    logging.info("<- add_comment: Некорректный номер инцидента " + str(num))
+                    logging.info("<- add_comment: Некорректный номер инцидента " + str(num) + ", чат:" + str(chat_id))
                     return
 
                 num = int(msg[1])
@@ -348,10 +347,10 @@ def add_comment(msg, chat_id, username, photo=0):
             else:
                 bot.send_message(chat_id, "/add [номер_инцидента] [комментарий] "
                                           "для добавления комментария к закрытому инциденту. ")
-                logger.info("<- add_comment: /add [номер_инцидента] [комментарий] ")
+                logger.info("<- add_comment: /add [номер_инцидента] [комментарий]: " + str(chat_id))
                 return
 
-        logger.debug("   текущий номер инцидента ", num)
+        logger.debug("   текущий номер инцидента: ", num)
 
         timestamp = datetime.datetime.now()
 
@@ -410,7 +409,6 @@ def add_comment(msg, chat_id, username, photo=0):
             datatuple)
         logger.info("<- add_comment")
     return
-
 
 
 # Создаем экземпляр бота и иниицируем db
@@ -640,7 +638,7 @@ def close_command(message):
                  ki_current_id)
 
     logger.debug("   пишем в БД: " + str(datatuple))
-    print(ki_current_id)
+
     write_to_db("UPDATE bot_chat_log_ext SET close_time=?, close_manager=?, "
                 "ki_close_info=?, status=? WHERE id=?;", datatuple)
 
@@ -714,13 +712,15 @@ def comments_command(message):
     # paranoid
     if len(msg) == 1 and ki_current_status == -1:
         bot.send_message(message.chat.id,
-                         "Нет открытого инцидента, напишите /comments [номер] для получения комментариев по прошлому инциденту")
+                         "Нет открытого инцидента, напишите /comments [номер]"
+                         " для получения комментариев по прошлому инциденту")
         logger.info("<- comments_command: Нет открытого инцидента")
         return
 
     if len(msg) == 1 and ki_current_status == 1:
         bot.send_message(message.chat.id,
-                         "Нет открытого инцидента, напишите /comments [номер] для получения комментариев по прошлому инциденту")
+                         "Нет открытого инцидента, напишите /comments [номер] "
+                         "для получения комментариев по прошлому инциденту")
         logger.info("<- comments_command: Нет открытого инцидента")
         return
 
@@ -778,6 +778,22 @@ def comments_command(message):
 logger.info("Загружаем начальные параметры")
 get_incident_status()
 
+def process_smth():
+    print("OK!")
+
+# еженедельный отчет по расписанию
+def do_schedule():
+    schedule.every(5).minutes.do(process_smth)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+threading.Thread(target=do_schedule).start()
+
+
+
 # Запускаем бота
 logger.info("Стартуем..")
 bot.polling(timeout=10, long_polling_timeout=5)
+
