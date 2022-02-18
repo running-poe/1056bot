@@ -697,7 +697,7 @@ def report_command(message):
     logger.info("<- report_command")
     return
 
-
+# получение комментариев к текущему инциденту или инциденту №
 @bot.message_handler(commands=["comments"])
 def comments_command(message):
     logger.info("-> comments_command")
@@ -778,31 +778,27 @@ def get_stats():
     sqlite_connection = 0
     stats = "Статистика по инцидентам:\n"
     try:
-        # получим инцидентов всего
-
         sqlite_connection = sqlite3.connect('sqlite_python.db')
+
+        # получим инцидентов всего
         cursor = sqlite_connection.cursor()
         cursor.execute("select count(*) from bot_chat_log_ext")
         res = cursor.fetchall()
         stats += "* всего зафиксировано: " + str(res[0][0]) + "\n"
 
-
         # получим инцидентов всего по ПЦЛ
-        sqlite_connection = sqlite3.connect('sqlite_python.db')
         cursor = sqlite_connection.cursor()
         cursor.execute("select count(*) from bot_chat_log_ext where system=0")
         res = cursor.fetchall()
         stats += "* из них по ИС ПЦЛ: " + str(res[0][0]) + "\n"
 
         # получим инцидентов всего по УВР
-        sqlite_connection = sqlite3.connect('sqlite_python.db')
         cursor = sqlite_connection.cursor()
         cursor.execute("select count(*) from bot_chat_log_ext where system=1")
         res = cursor.fetchall()
         stats += "* из них по ИС УВР: " + str(res[0][0]) + "\n"
 
         # получим инцидентов всего по ПЦЛ за 7 дней
-        sqlite_connection = sqlite3.connect('sqlite_python.db')
         cursor = sqlite_connection.cursor()
         cursor.execute("select count(*) from bot_chat_log_ext WHERE "
                        "open_time > (SELECT DATETIME('now', '-7 day')) and system =0")
@@ -810,7 +806,6 @@ def get_stats():
         stats += "* по ИС ПЦЛ за неделю: " + str(res[0][0]) + "\n"
 
         # получим инцидентов всего по УВР за 7 дней
-        sqlite_connection = sqlite3.connect('sqlite_python.db')
         cursor = sqlite_connection.cursor()
         cursor.execute("select count(*) from bot_chat_log_ext WHERE "
                        "open_time > (SELECT DATETIME('now', '-7 day')) and system =1")
@@ -818,9 +813,10 @@ def get_stats():
         stats += "* по ИС УВР за неделю: " + str(res[0][0]) + "\n"
 
         # получим среднюю длительность решения инцидента
-        sqlite_connection = sqlite3.connect('sqlite_python.db')
         cursor = sqlite_connection.cursor()
-        cursor.execute("select CAST(avg(avg_time) as INTEGER) from (select ROUND((julianday(close_time)-julianday(open_time))*24*60) as avg_time from bot_chat_log_ext)")
+        cursor.execute("select CAST(avg(avg_time) as INTEGER) from "
+                       "(select ROUND((julianday(close_time)-julianday(open_time))*24*60) "
+                       "as avg_time from bot_chat_log_ext)")
         res = cursor.fetchall()
         stats += "* средняя длительность инцидента: " + str(res[0][0]) + " минут\n"
         """
@@ -843,7 +839,7 @@ def get_stats():
             logger.debug("Соединение с SQLite закрыто")
     return stats
 
-
+# команда /stats формирует статистику по инцидентам всего/за 7 последних дней
 @bot.message_handler(commands=["stats"])
 def stats_command(message):
     logger.info("-> stats_command")
@@ -853,12 +849,11 @@ def stats_command(message):
     return
 
 
-
 # обновим статус
 logger.info("Загружаем начальные параметры")
 get_incident_status()
 
-
+# событие отправки статистики инцидентов по расписанию, дергается шедулером
 def send_stats():
     global bot_chat_list
     logger.info("-> СОБЫТИЕ send_stats")
@@ -869,14 +864,15 @@ def send_stats():
     logger.info("<- send_stats")
 
 
-# еженедельный отчет по расписанию
+# еженедельный отчет по статистике инцидентов, установка шедулера
 def do_schedule():
     logger.info("--> ПОТОК do_schedule")
-    schedule.every().monday.at("8:30").do(send_stats)
+    schedule.every().monday.at("08:30").do(send_stats)
     while True:
         schedule.run_pending()
         time.sleep(1)
 
+#  поток для заданий
 threading.Thread(target=do_schedule).start()
 
 ## SELECT * FROM bot_chat_log_ext WHERE open_time > (SELECT DATETIME('now', '-20 day'))
