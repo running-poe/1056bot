@@ -12,6 +12,8 @@ import sys
 import configparser
 import threading
 import schedule
+import docxtpl
+
 
 # Глобальные переменные
 # идентификатор текущего открытого инцидента, -1 если нет открытых
@@ -22,6 +24,9 @@ ki_current_status = -1
 
 # набор id чатов, где зарегистрирован бот
 bot_chat_list = []
+
+# экземпляр bot
+bot = 0
 
 
 # метод для формирования имени файла для ротационного логгера
@@ -47,6 +52,7 @@ def get_filename(filename):
         index += 1
         f = '{}.{}.log'.format(filename, index)
     return f
+
 
 # прочитаем конфигурационный файл
 config = configparser.ConfigParser()
@@ -138,54 +144,6 @@ def init_db():
             sqlite_connection.close()
             print("initdb: соединение с SQLite закрыто")
 
-# метод выгружает номер и статус инцидента
-def get_incident_status():
-    global ki_current_id
-    global ki_current_status
-    global bot_chat_list
-    logger.info("-> get_incident_status")
-    with open('app.json', 'r') as file_object:
-        data = json.load(file_object)
-        ki_current_id = data[0]
-        ki_current_status = data[1]
-    logger.debug("Номер текущего инцидента: " + str(ki_current_id))
-    logger.debug("Статус текущего инцидента: " + str(ki_current_status))
-    try:
-        with open('chats.json', 'r') as file_object:
-            data = json.load(file_object)
-            bot_chat_list = data
-        logger.debug("   Выгружен список id чатов: " + str(bot_chat_list))
-    except OSError:
-        logger.warning("   При первом запуске бота эта ошибка возможна. "
-                     "Нужно зарегистрировать бота командой /register в каждом чате")
-        frame = traceback.extract_tb(sys.exc_info()[2])
-        line_no = str(frame[0]).split()[4]
-        error_log(line_no)
-        pass
-    logger.info("<- get_incident_status")
-
-# метод сохраняет статус инцидента (номер, статус)
-def store_incident_status():
-    global ki_current_id
-    global ki_current_status
-    global bot_chat_list
-
-    logger.info("-> store_incident_status")
-
-    dataduple = [ki_current_id, ki_current_status]
-    filename = 'app.json'
-    with open(filename, 'w') as file_object:
-        json.dump(dataduple, file_object)
-
-    logger.debug("   Пишем статусы: " + str(filename) + " " + str(dataduple))
-
-    filenamechats = 'chats.json'
-    with open(filenamechats, 'w') as file_object:  
-        json.dump(bot_chat_list, file_object)
-
-    logger.debug("   Пишем статусы: " + str(filenamechats) + " " + str(bot_chat_list))
-    logger.info("<- store_incident_status")
-
 
 # функция записи в БД
 def write_to_db(s, datatuple):
@@ -205,8 +163,57 @@ def write_to_db(s, datatuple):
             logger.debug("   Cоединение с SQLite закрыто!")
     logger.info("<- write_to_db")
 
-# метод формирует отчет
-def get_report(curr=-1):
+
+#############################################################################
+## Методы обслуживания технических отчетов
+#############################################################################
+
+# открыть новый отчет, добавить #хештег и тему отчета
+def open_new_issue_command():
+    pass
+
+
+# добавить комменатрий к отчету
+def add_issue_comment_command():
+    pass
+
+
+# добавить комменатрий с картинкой к отчету
+def add_img_issue_comment_command():
+    pass
+
+
+# финализировать технический отчет, добавить заключение (conclusion)
+def close_issue_command():
+    pass
+
+
+# добавить информацию к секции вывода conclusion
+def add_conclusion_issue_command():
+    pass
+
+
+# найти отчет, материалы которого содержат искомый #hashtag
+def search_issue_command():
+    pass
+
+
+# записать технический отчет в Word
+def save_issue_to_docx():
+    pass
+
+
+# записать технический отчет в Excel
+def save_issue_to_xlsx():
+    pass
+
+
+#############################################################################
+## Методы обслуживания инцидентов
+#############################################################################
+
+# метод формирует краткий отчет по инцидентам для чата
+def get_incident_report(curr=-1):
     logger.info("-> get_report")
     # строка с отчетом
     report = ""
@@ -259,7 +266,58 @@ def get_report(curr=-1):
     return report
 
 
-def save_report_to_csv(param=0, data=0):
+# метод выгружает номер и статус инцидента
+def get_incident_status():
+    global ki_current_id
+    global ki_current_status
+    global bot_chat_list
+    logger.info("-> get_incident_status")
+    with open('app.json', 'r') as file_object:
+        data = json.load(file_object)
+        ki_current_id = data[0]
+        ki_current_status = data[1]
+    logger.debug("Номер текущего инцидента: " + str(ki_current_id))
+    logger.debug("Статус текущего инцидента: " + str(ki_current_status))
+    try:
+        with open('chats.json', 'r') as file_object:
+            data = json.load(file_object)
+            bot_chat_list = data
+        logger.debug("   Выгружен список id чатов: " + str(bot_chat_list))
+    except OSError:
+        logger.warning("   При первом запуске бота эта ошибка возможна. "
+                     "Нужно зарегистрировать бота командой /register в каждом чате")
+        frame = traceback.extract_tb(sys.exc_info()[2])
+        line_no = str(frame[0]).split()[4]
+        error_log(line_no)
+        pass
+    logger.info("<- get_incident_status")
+
+
+# метод сохраняет статус инцидента (номер, статус)
+def store_incident_status():
+    global ki_current_id
+    global ki_current_status
+    global bot_chat_list
+
+    logger.info("-> store_incident_status")
+
+    dataduple = [ki_current_id, ki_current_status]
+    filename = 'app.json'
+    with open(filename, 'w') as file_object:
+        json.dump(dataduple, file_object)
+
+    logger.debug("   Пишем статусы: " + str(filename) + " " + str(dataduple))
+
+    filenamechats = 'chats.json'
+    with open(filenamechats, 'w') as file_object:
+        json.dump(bot_chat_list, file_object)
+
+    logger.debug("   Пишем статусы: " + str(filenamechats) + " " + str(bot_chat_list))
+    logger.info("<- store_incident_status")
+
+
+# записать краткий отчет по инцидентам в csv
+def save_incident_report_to_csv(param=0, data=0):
     logger.info("-> save_report_to_csv")
     sqlite_connection = 0
     try:
@@ -292,8 +350,18 @@ def save_report_to_csv(param=0, data=0):
     return
 
 
-# метод добавления комментария
-def add_comment(msg, chat_id, username, photo=0):
+# записать краткий отчет по инцидентам в Word
+def save_short_incident_report_to_docx():
+    pass
+
+
+# записать полный отчет по инцидентам в Word
+def save_full_incident_report_to_docx():
+    pass
+
+
+# метод добавления комментария к инциденту
+def add_incident_comment(msg, chat_id, username, photo=0):
     logger.info("-> add_comment")
     global ki_current_id
     global ki_current_status
@@ -411,17 +479,11 @@ def add_comment(msg, chat_id, username, photo=0):
     return
 
 
-# Создаем экземпляр бота и иниицируем db
-logger.info("Регистрация бота в Телеграмме..")
-bot = telebot.TeleBot(config['DEFAULT']['APIKEY'])
-
-# init_db()
-
-
-@bot.message_handler(commands=["send_report"])
-def send_report_command(message):
+# сформировать отчет по инциденту в csv
+@bot.message_handler(commands=["csv_report"])
+def send_incident_report_command(message):
     logger.info("-> send_report_command")
-    save_report_to_csv()
+    save_incident_report_to_csv()
     try:
         f = open("output.csv", "rb")
         bot.send_document(message.chat.id, f)
@@ -459,7 +521,7 @@ def commands_command(message):
     return
 
 
-# Функция регистрации бота на канале /register
+# Метод регистрации бота на канале /register
 @bot.message_handler(commands=["register"])
 def register_command(message):
     global bot_chat_list
@@ -468,38 +530,40 @@ def register_command(message):
         bot.send_message(message.chat.id, "Бот уже зарегистрирован на канале")
         logger.debug("   Бот уже зарегистрирован на канале " + str(message.chat.id))
         return
-    logger.debug("   Дополним список чатов " +str( message.chat.id))
+    logger.debug("   Дополним список чатов " + str(message.chat.id))
     bot_chat_list.append(message.chat.id)
     bot.send_message(message.chat.id, "Бот успешно зарегистрирован на канале")
     # важно записать chat_id для нового канала
-    logger.debug("   запишем id, status: " +str(ki_current_id) + " " + str(ki_current_status))
+    logger.debug("   запишем id, status: " + str(ki_current_id) + " " + str(ki_current_status))
     store_incident_status()
-    logger("<- register_command")
+    logger.debug("<- register_command")
     return
 
 
+# Метод снятия регистрации бота на канале, поддержка  /unregister
 @bot.message_handler(commands=["unregister"])
 def unregister_command(message):
     logger.info("-> unregister_command")
-    delete_registration(message.chat.id)
+    unregister(message.chat.id)
     # важно записать chat_id для нового канала
-    logger.debug("   запишем id, status: " +str(ki_current_id) + " " + str(ki_current_status))
+    logger.debug("   запишем id, status: " + str(ki_current_id) + " " + str(ki_current_status))
     store_incident_status()
     logger.info("<- unregister_command")
     return
 
 
-def delete_registration(chatid):
+# реализация снятия регистрации бота на канале
+def unregister(chatid):
     logger.info("-> delete_registration")
     global bot_chat_list
     if chatid in bot_chat_list:
-        logger.debug("   удаляем: " +str(chatid))
+        logger.debug("   удаляем: " + str(chatid))
         bot_chat_list.remove(chatid)
     logger.info("-> delete_registration")
     return
 
 
-# Функция, обрабатывающая команду /msg
+# Метод обрабатывающая команду /msg, реализация оповещения по всем каналам присутствия бота
 @bot.message_handler(commands=["msg"])
 def msg_command(message):
     global bot_chat_list
@@ -527,7 +591,7 @@ def msg_command(message):
 
 # Функция, обрабатывающая команду /open
 @bot.message_handler(commands=["open"])
-def open_command(message):
+def open_incident_command(message):
     global ki_current_id
     global ki_current_status
     global bot_chat_list
@@ -599,7 +663,7 @@ def open_command(message):
 
 # закрыть инцидент командной /close комменатрий_по_закрытию
 @bot.message_handler(commands=["close"])
-def close_command(message):
+def close_incident_command(message):
     global ki_current_id
     global ki_current_status
     global bot_chat_list
@@ -645,10 +709,10 @@ def close_command(message):
     for chatid in bot_chat_list:
         bot.send_message(chatid, "Закрываем инцидент №" + str(ki_current_id) + ": " + ki_close_info +
                          "\nИнцидент закрыл: @" + message.from_user.username +
-                         get_report(ki_current_id))
+                         get_incident_report(ki_current_id))
         logger.debug("   close: " + str(chatid) + " Закрываем инцидент №" + str(ki_current_id) + ": " + ki_close_info +
                          "\nИнцидент закрыл: @" + message.from_user.username +
-                         get_report(ki_current_id))
+                     get_incident_report(ki_current_id))
         time.sleep(0.1)
 
     # сохраним изменения по статусу последнего инцидента в БД
@@ -658,11 +722,11 @@ def close_command(message):
 
 # добавить комментарий к текущему инциденту командой /add
 @bot.message_handler(commands=["add"])
-def add_command(message):
+def add_incident_comment_command(message):
     logger.info("-> add_command")
-    add_comment(message.text.split(),
-                message.chat.id,
-                message.from_user.username)
+    add_incident_comment(message.text.split(),
+                         message.chat.id,
+                         message.from_user.username)
     logger.info("<- add_command")
     return
 
@@ -674,32 +738,32 @@ def addimg_command(message):
     # проблема - мы можем записать только ту фотографию, под которой есть caption. Когда мы кидаем несколько фоток,
     # запишем только одну с полем caption. Ограничение и нюанс..
     if message.caption is None:
-        logger.debug("   отсутствует caption к фото, пропускаем")
+        logger.debug("   add_img: отсутствует caption к фото, пропускаем, отправил " + str(message.from_user.username))
         return
-
     # а с Caption же работаем
     msg = message.caption.split()
-    add_comment(msg,
-                message.chat.id,
-                message.from_user.username,
-                message.photo)
+    add_incident_comment(msg,
+                         message.chat.id,
+                         message.from_user.username,
+                         message.photo)
     logger.info("<- addimg_command")
     return
 
 
 # получение отчета по инцидентам из БД
 @bot.message_handler(commands=["report"])
-def report_command(message):
+def report_incident_command(message):
     logger.info("-> report_command")
-    rep = get_report()
+    rep = get_incident_report()
     bot.send_message(message.chat.id, rep)
     logger.debug(rep)
     logger.info("<- report_command")
     return
 
+
 # получение комментариев к текущему инциденту или инциденту №
 @bot.message_handler(commands=["comments"])
-def comments_command(message):
+def comments_incident_command(message):
     logger.info("-> comments_command")
     global ki_current_id
     global ki_current_status
@@ -773,18 +837,39 @@ def comments_command(message):
     logger.info("<- comments_command")
     return
 
+
 # метод формирует статистику по инцидентам
-def get_stats():
+def get_incident_weekly_stats():
     sqlite_connection = 0
-    stats = "Статистика по инцидентам:\n"
+    stats = ""
+    logger.info("-> get_stats")
     try:
         sqlite_connection = sqlite3.connect('sqlite_python.db')
+
+        # получим инцидентов всего по ПЦЛ за 7 дней
+        cursor = sqlite_connection.cursor()
+        cursor.execute("select count(*) from bot_chat_log_ext WHERE "
+                       "open_time > (SELECT DATETIME('now', '-7 day')) and system =0")
+        res = cursor.fetchall()
+        stats += "Всего инцидентов по ИС ПЦЛ за неделю: " + str(res[0][0]) + "\n"
+
+        # получим инцидентов всего по УВР за 7 дней
+        cursor = sqlite_connection.cursor()
+        cursor.execute("select count(*) from bot_chat_log_ext WHERE "
+                       "open_time > (SELECT DATETIME('now', '-7 day')) and system =1")
+        res = cursor.fetchall()
+        stats += "Всего инцидентов по ИС УВР за неделю: " + str(res[0][0]) + "\n"
 
         # получим инцидентов всего
         cursor = sqlite_connection.cursor()
         cursor.execute("select count(*) from bot_chat_log_ext")
         res = cursor.fetchall()
-        stats += "* всего зафиксировано: " + str(res[0][0]) + "\n"
+
+        cursor = sqlite_connection.cursor()
+        cursor.execute("select date(open_time) from bot_chat_log_ext where id=1")
+        res1 = cursor.fetchall()
+
+        stats += "Всего инцидентов зафиксировано c" + str(res1[0][0]) + ": " + str(res[0][0]) + "\n"
 
         # получим инцидентов всего по ПЦЛ
         cursor = sqlite_connection.cursor()
@@ -797,20 +882,6 @@ def get_stats():
         cursor.execute("select count(*) from bot_chat_log_ext where system=1")
         res = cursor.fetchall()
         stats += "* из них по ИС УВР: " + str(res[0][0]) + "\n"
-
-        # получим инцидентов всего по ПЦЛ за 7 дней
-        cursor = sqlite_connection.cursor()
-        cursor.execute("select count(*) from bot_chat_log_ext WHERE "
-                       "open_time > (SELECT DATETIME('now', '-7 day')) and system =0")
-        res = cursor.fetchall()
-        stats += "* по ИС ПЦЛ за неделю: " + str(res[0][0]) + "\n"
-
-        # получим инцидентов всего по УВР за 7 дней
-        cursor = sqlite_connection.cursor()
-        cursor.execute("select count(*) from bot_chat_log_ext WHERE "
-                       "open_time > (SELECT DATETIME('now', '-7 day')) and system =1")
-        res = cursor.fetchall()
-        stats += "* по ИС УВР за неделю: " + str(res[0][0]) + "\n"
 
         # получим среднюю длительность решения инцидента
         cursor = sqlite_connection.cursor()
@@ -837,27 +908,35 @@ def get_stats():
         if sqlite_connection:
             sqlite_connection.close()
             logger.debug("Соединение с SQLite закрыто")
+    logger.info("<- get_stats")
     return stats
+
 
 # команда /stats формирует статистику по инцидентам всего/за 7 последних дней
 @bot.message_handler(commands=["stats"])
-def stats_command(message):
+def stats_incident_command(message):
     logger.info("-> stats_command")
-    stats = get_stats()
+    stats = "Статистика по инцидентам за неделю:\n"
+    stats += get_incident_weekly_stats()
     bot.send_message(message.chat.id, stats)
     logger.info("<- stats_command")
     return
 
 
+#############################################################################
+## Секция загрузки
+#############################################################################
 # обновим статус
 logger.info("Загружаем начальные параметры")
 get_incident_status()
 
+
 # событие отправки статистики инцидентов по расписанию, дергается шедулером
-def send_stats():
+def send_incident_stats():
     global bot_chat_list
     logger.info("-> СОБЫТИЕ send_stats")
-    stat = get_stats()
+    stat = "Еженедельная рассылка по инцидентам:\n"
+    stat += get_incident_weekly_stats()
     for chat_id in bot_chat_list:
         bot.send_message(chat_id, stat)
         logger.debug("  рассылка по расписанию: " + str(chat_id))
@@ -867,10 +946,15 @@ def send_stats():
 # еженедельный отчет по статистике инцидентов, установка шедулера
 def do_schedule():
     logger.info("--> ПОТОК do_schedule")
-    schedule.every().monday.at("08:30").do(send_stats)
+    schedule.every().monday.at("08:30").do(send_incident_stats)
     while True:
         schedule.run_pending()
         time.sleep(1)
+
+
+# Создаем экземпляр бота
+logger.info("Регистрация бота в Телеграмме..")
+bot = telebot.TeleBot(config['DEFAULT']['APIKEY'])
 
 #  поток для заданий
 threading.Thread(target=do_schedule).start()
