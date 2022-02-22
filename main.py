@@ -478,6 +478,9 @@ def add_incident_comment(msg, chat_id, username, photo=0):
         logger.info("<- add_comment")
     return
 
+# Создаем экземпляр бота
+logger.info("Инициализация объекта TeleBot")
+bot = telebot.TeleBot(config['DEFAULT']['APIKEY'])
 
 # сформировать отчет по инциденту в csv
 @bot.message_handler(commands=["csv_report"])
@@ -540,7 +543,7 @@ def register_command(message):
     return
 
 
-# Метод снятия регистрации бота на канале, поддержка  /unregister
+# Метод снятия регистрации бота на канале, поддержка /unregister
 @bot.message_handler(commands=["unregister"])
 def unregister_command(message):
     logger.info("-> unregister_command")
@@ -952,9 +955,7 @@ def do_schedule():
         time.sleep(1)
 
 
-# Создаем экземпляр бота
-logger.info("Регистрация бота в Телеграмме..")
-bot = telebot.TeleBot(config['DEFAULT']['APIKEY'])
+
 
 #  поток для заданий
 threading.Thread(target=do_schedule).start()
@@ -963,5 +964,5 @@ threading.Thread(target=do_schedule).start()
 
 # Запускаем бота
 logger.info("Стартуем..")
-bot.polling(timeout=10, long_polling_timeout=5)
+bot.polling(timeout=20, long_polling_timeout=5)
 
