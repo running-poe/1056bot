@@ -164,6 +164,64 @@ def write_to_db(s, datatuple):
     logger.info("<- write_to_db")
 
 
+# метод поиска и записи в БД #hashword
+# параметр from_where:
+# 1 - ицнцидент
+# 2 - комменатрий к инциденту
+# 3 - issue
+# 4 - комментарий к issue
+def check_and_save_hashword(msg, from_where, index):
+
+    where_id = (from_where, index)
+
+    # каждое ключевое слово записываем в отдельную строку
+    for m in msg:
+        if str(m).startswith("#"):
+            # нашли ключевое слово
+            datatuple = (str(m), str(where_id))
+            write_to_db("INSERT INTO hashword_tbl(hashword, where_id) VALUES(?,?)",
+                        datatuple)
+
+
+def search_for_a_hashword(hashword):
+    # 1. Сначала найдем hashword в таблице
+    res = ()
+    logger.info("-> search_for_a_hashword: " + hashword)
+    try:
+        sqlite_connection = sqlite3.connect('sqlite_python.db')
+        # получим инцидентов всего по ПЦЛ за 7 дней
+        cursor = sqlite_connection.cursor()
+        cursor.execute("select where_id from hashword_tbl WHERE "
+                       "hashword=" + str(hashword))
+        res = cursor.fetchall()
+    except sqlite3.Error as error:
+        logger.error(error)
+        frame = traceback.extract_tb(sys.exc_info()[2])
+        line_no = str(frame[0]).split()[4]
+        error_log(line_no)
+    finally:
+        if sqlite_connection:
+            sqlite_connection.close()
+            logger.debug("Соединение с SQLite закрыто")
+
+    if len(res) == 0:
+        return None
+
+    for datatuple in res:
+        match datatuple[0][0]:
+            case 1:
+                pass
+            case 2:
+                pass
+            case 3:
+                pass
+            case 4:
+                pass
+            case _:
+                pass
+
+
+
 #############################################################################
 ## Методы обслуживания технических отчетов
 #############################################################################
@@ -412,6 +470,9 @@ def add_incident_comment(msg, chat_id, username, photo=0):
                 # удалим из сообщения команду и номер комментария
                 msg.pop(0)
                 msg.pop(0)
+
+                check_and_save_hashword(msg, 2, ki_current_id)
+
             else:
                 bot.send_message(chat_id, "/add [номер_инцидента] [комментарий] "
                                           "для добавления комментария к закрытому инциденту. ")
@@ -420,7 +481,7 @@ def add_incident_comment(msg, chat_id, username, photo=0):
 
         logger.debug("   текущий номер инцидента: ", num)
 
-        timestamp = datetime.datetime.now()
+        # timestamp = datetime.datetime.now()
 
         comment = ' '.join(msg)
         datatuple = (num,
@@ -484,7 +545,7 @@ bot = telebot.TeleBot(config['DEFAULT']['APIKEY'])
 
 # сформировать отчет по инциденту в csv
 @bot.message_handler(commands=["csv_report"])
-def send_incident_report_command(message):
+def incident_csv_report_command(message):
     logger.info("-> send_report_command")
     save_incident_report_to_csv()
     try:
@@ -500,7 +561,7 @@ def send_incident_report_command(message):
     return
 
 
-# Функция /commands
+# Метод /commands
 @bot.message_handler(commands=["commands"])
 def commands_command(message):
     logger.info("-> commands_command")
@@ -632,6 +693,9 @@ def open_incident_command(message):
     # подготовим данные для инициации инцидента из сообщения
     msg.pop(0)
     msg.pop(0)
+
+    # check_and_save_hashword(msg, 1, ki_current_id)
+
     ki_message = ' '.join(msg)
     timestamp = datetime.datetime.now()
     logger.debug("   Пишем в БД: " + str(timestamp.strftime("%Y-%m-%d %H:%M:%S")) + " " + str(ki_message))
