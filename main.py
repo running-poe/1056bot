@@ -149,7 +149,7 @@ def init_db():
 def write_to_db(s, datatuple):
     sqlite_connection = 0
     logger.info("-> write_to_db")
-    logger.debug("  ", datatuple)
+    logger.debug("  " + str(datatuple))
     try:
         sqlite_connection = sqlite3.connect('sqlite_python.db')
         cursor = sqlite_connection.cursor()
@@ -171,10 +171,8 @@ def write_to_db(s, datatuple):
 # 3 - issue
 # 4 - комментарий к issue
 def check_and_save_hashword(msg, from_where, index):
-
     where_id = (from_where, index)
-
-    # каждое ключевое слово записываем в отдельную строку
+   # каждое ключевое слово записываем в отдельную строку
     for m in msg:
         if str(m).startswith("#"):
             # нашли ключевое слово
@@ -183,16 +181,17 @@ def check_and_save_hashword(msg, from_where, index):
                         datatuple)
 
 
-def search_for_a_hashword(hashword):
+def fetch_data_with_hashword(hashword):
     # 1. Сначала найдем hashword в таблице
     res = ()
     logger.info("-> search_for_a_hashword: " + hashword)
+    sqlite_connection = 0
     try:
         sqlite_connection = sqlite3.connect('sqlite_python.db')
-        # получим инцидентов всего по ПЦЛ за 7 дней
+        # получим все упоминания hashword
         cursor = sqlite_connection.cursor()
         cursor.execute("select where_id from hashword_tbl WHERE "
-                       "hashword=" + str(hashword))
+                       "hashword='" + str(hashword) + "'")
         res = cursor.fetchall()
     except sqlite3.Error as error:
         logger.error(error)
@@ -208,10 +207,14 @@ def search_for_a_hashword(hashword):
         return None
 
     for datatuple in res:
-        match datatuple[0][0]:
+        a = eval(datatuple[0])
+        # первое волшебное число это тип таблицы для поиска, второй - индекс в таблице поиска
+        s = ""
+        match a[0]:
             case 1:
                 pass
             case 2:
+                s = "select comment, commentator, comment_time, fk_id from incident_comment_data where id=" + str(a[1])
                 pass
             case 3:
                 pass
@@ -220,12 +223,27 @@ def search_for_a_hashword(hashword):
             case _:
                 pass
 
+        try:
+            sqlite_connection = sqlite3.connect('sqlite_python.db')
+            # получим все упоминания hashword
+            cursor = sqlite_connection.cursor()
+            cursor.execute(s)
+            res = cursor.fetchall()
+        except sqlite3.Error as error:
+            logger.error(error)
+            frame = traceback.extract_tb(sys.exc_info()[2])
+            line_no = str(frame[0]).split()[4]
+            error_log(line_no)
+        finally:
+            if sqlite_connection:
+                sqlite_connection.close()
+                logger.debug("Соединение с SQLite закрыто")
 
+    return res[0]
 
 #############################################################################
 ## Методы обслуживания технических отчетов
 #############################################################################
-
 # открыть новый отчет, добавить #хештег и тему отчета
 def open_new_issue_command():
     pass
@@ -479,9 +497,9 @@ def add_incident_comment(msg, chat_id, username, photo=0):
                 logger.info("<- add_comment: /add [номер_инцидента] [комментарий]: " + str(chat_id))
                 return
 
-        logger.debug("   текущий номер инцидента: ", num)
+        logger.debug("   текущий номер инцидента: " + str(num))
 
-        # timestamp = datetime.datetime.now()
+        timestamp = datetime.datetime.now()
 
         comment = ' '.join(msg)
         datatuple = (num,
@@ -645,6 +663,9 @@ def msg_command(message):
 
     initiator = message.from_user.username
     for chat_id in bot_chat_list:
+        # в текущий чат не направляем собственное сообщение
+        if chat_id == message.chat.id:
+            continue
         bot.send_message(chat_id, "Сообщение от @" + str(initiator) + ": " + str(msg))
         logger.debug("   msg в chat_id: " + str(chat_id) + " Сообщение от @" + str(initiator) + ": " + str(msg))
         time.sleep(0.1)
@@ -663,7 +684,7 @@ def open_incident_command(message):
     logger.info("-> open_command")
     # флаг системы для инцидента, чтобы можно было в отчете разделить ПЦЛ/УВР. 0 = ПЦЛ, 1 = УВР
     # атрибут пишется в таблицу по каждому инциденту
-    # system = 0
+    system = 0
 
     # обновим статус по инциденту
     logger.debug("   загрузка текущих статусов инцидента")
@@ -712,7 +733,7 @@ def open_incident_command(message):
     # сохраним параметры
     ki_current_id += 1
     ki_current_status = 0
-    logger.debug("   запишем id, status: " +str(ki_current_id) + " " + str(ki_current_status))
+    logger.debug("   запишем id, status: " + str(ki_current_id) + " " + str(ki_current_status))
     store_incident_status()
 
     if message.chat.id not in bot_chat_list:
@@ -1019,14 +1040,14 @@ def do_schedule():
         time.sleep(1)
 
 
-
-
 #  поток для заданий
-threading.Thread(target=do_schedule).start()
+# threading.Thread(target=do_schedule).start()
+
+
+
 
 ## SELECT * FROM bot_chat_log_ext WHERE open_time > (SELECT DATETIME('now', '-20 day'))
 
 # Запускаем бота
 logger.info("Стартуем..")
 bot.polling(timeout=20, long_polling_timeout=5)
-
