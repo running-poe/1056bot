@@ -549,7 +549,7 @@ def add_incident_comment(msg, chat_id, username, photo=0):
                      username,
                      comment,
                      data)
-        logger.debug("  пишем в БД (без фото):\n" +str(datatuple[0]) + " " +
+        logger.debug("  пишем в БД (без фото):\n" + str(datatuple[0]) + " " +
                      str(datatuple[1]) + " " + str(datatuple[2]) + " " + str(datatuple[3]))
         write_to_db(
             "INSERT INTO incident_comment_data(fk_id,comment_time,commentator,comment,data) VALUES(?,?,?,?,?);",
@@ -583,7 +583,7 @@ def incident_csv_report_command(message):
 @bot.message_handler(commands=["commands"])
 def commands_command(message):
     logger.info("-> commands_command")
-    bot.send_message(message.chat.id, "***1056bot*** 0.24\n\nБот для оповещения и ведения статистики инцидентов.\n"
+    bot.send_message(message.chat.id, "***1056bot*** 0.42\n\nБот для оповещения и ведения статистики инцидентов.\n"
                                       "/open [ПЦЛ/УВР] [комментарий] - открыть инцидент по системе [ПЦЛ/УВР], указать комментарий о происшествии\n"
                                       "/close [комментарий] - сообщить о закрытии инцидента\n"
                                       "/report - вывести отчет по инцидентам\n"
@@ -719,31 +719,31 @@ def open_incident_command(message):
 
     ki_message = ' '.join(msg)
     timestamp = datetime.datetime.now()
-    logger.debug("   Пишем в БД: " + str(timestamp.strftime("%Y-%m-%d %H:%M:%S")) + " " + str(ki_message))
+    logger.debug(f"   Пишем в БД: {str(timestamp.strftime('%Y-%m-%d %H:%M:%S'))} {str(ki_message)}")
 
     datatuple = (timestamp.strftime("%Y-%m-%d %H:%M:%S"),
                  message.from_user.username,
                  ki_message,
                  0,
                  system)
-    logger.debug("   пишем в БД: " + str(datatuple))
+    logger.debug(f"   пишем в БД: {str(datatuple)}")
     write_to_db("INSERT INTO bot_chat_log_ext(open_time, initiator, ki_open_info, status, system) VALUES(?,?,?,?,?);",
                 datatuple)
 
     # сохраним параметры
     ki_current_id += 1
     ki_current_status = 0
-    logger.debug("   запишем id, status: " + str(ki_current_id) + " " + str(ki_current_status))
+    logger.debug(f"   запишем id, status: {str(ki_current_id)}  {str(ki_current_status)}")
     store_incident_status()
 
     if message.chat.id not in bot_chat_list:
         bot_chat_list.append(message.chat.id)
 
     for chatid in bot_chat_list:
-        bot.send_message(chatid, "Открыт инцидент №" + str(ki_current_id) + ": " + ki_message +
-                         "\nИнициатор: @" + str(message.from_user.username))
-        logger.debug("   open: " + str(chatid) + "Открыт инцидент №" + str(ki_current_id) + ": " + ki_message +
-                         "\nИнициатор: @" + str(message.from_user.username))
+        bot.send_message(chatid, f"Открыт инцидент № {str(ki_current_id)} : "
+                                 f"{ki_message} \nИнициатор: @{message.from_user.username}")
+        logger.debug(f"   open:  {str(chatid)} Открыт инцидент {str(ki_current_id)}: {ki_message} "
+                     f"\nИнициатор: @{str(message.from_user.username)}")
         time.sleep(0.1)
     logger.info("<- open_command")
     return
@@ -795,9 +795,8 @@ def close_incident_command(message):
                 "ki_close_info=?, status=? WHERE id=?;", datatuple)
 
     for chatid in bot_chat_list:
-        bot.send_message(chatid, "Закрываем инцидент №" + str(ki_current_id) + ": " + ki_close_info +
-                         "\nИнцидент закрыл: @" + message.from_user.username +
-                         get_incident_report(ki_current_id))
+        bot.send_message(chatid, f"Закрываем инцидент № {str(ki_current_id)}: {ki_close_info} "
+                                 f"\nИнцидент закрыл: @{message.from_user.username} {get_incident_report(ki_current_id)}")
         logger.debug("   close: " + str(chatid) + " Закрываем инцидент №" + str(ki_current_id) + ": " + ki_close_info +
                          "\nИнцидент закрыл: @" + message.from_user.username +
                      get_incident_report(ki_current_id))
@@ -1034,19 +1033,15 @@ def send_incident_stats():
 # еженедельный отчет по статистике инцидентов, установка шедулера
 def do_schedule():
     logger.info("--> ПОТОК do_schedule")
-    schedule.every().monday.at("08:30").do(send_incident_stats)
+    ## schedule.every().monday.at("08:30").do(send_incident_stats)
+    logger.debug("    отработали!")
     while True:
         schedule.run_pending()
         time.sleep(1)
 
 
 #  поток для заданий
-# threading.Thread(target=do_schedule).start()
-
-
-
-
-## SELECT * FROM bot_chat_log_ext WHERE open_time > (SELECT DATETIME('now', '-20 day'))
+threading.Thread(target=do_schedule).start()
 
 # Запускаем бота
 logger.info("Стартуем..")
